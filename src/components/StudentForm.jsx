@@ -1,99 +1,215 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
+import Webcam from 'react-webcam';
+import { supabase } from '../supabaseClient';
 
-const StudentForm = () => {
-  const [name, setName] = useState('');
-  const [fatherName, setFatherName] = useState('');
-  const [mobile, setMobile] = useState('');
-  const [dob, setDob] = useState('');
-  const [admissionDate, setAdmissionDate] = useState('');
-  const [batch, setBatch] = useState('');
-  const [receipt, setReceipt] = useState('');
-  const [fee, setFee] = useState('');
-  const [notes, setNotes] = useState('');
-  const [photo, setPhoto] = useState(null); // Optional
+function StudentForm() {
+  const [formData, setFormData] = useState({
+    name: '',
+    fatherName: '',
+    mobile: '',
+    dob: '',
+    receipt: '',
+    admissionDate: '',
+    batch: '',
+    fee: '',
+    notes: '',
+    photo: null,
+  });
+  const [capture, setCapture] = useState(false);
+  const webcamRef = useRef(null);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!name || !fatherName || !mobile || !dob || !admissionDate || !batch) {
-      alert('Please fill all required fields!');
-      return;
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleImageChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setFormData((prev) => ({ ...prev, photo: URL.createObjectURL(e.target.files[0]) }));
     }
-    // Submit Logic here
-    console.log('Form Submitted:', {
-      name, fatherName, mobile, dob, admissionDate, batch, receipt, fee, notes, photo
-    });
-    alert('Form submitted successfully!');
+  };
+
+  const capturePhoto = () => {
+    const imageSrc = webcamRef.current.getScreenshot();
+    setFormData((prev) => ({ ...prev, photo: imageSrc }));
+    setCapture(false);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    const { name, fatherName, mobile, dob, admissionDate, batch } = formData;
+
+    // Validation: check required fields
+    if (!name || !fatherName || !mobile || !dob || !admissionDate || !batch) {
+      alert('Please fill all required fields.');
+      return; // Stop submission if validation fails
+    }
+
+    // Prepare data to send
+    const studentData = { ...formData };
+
+    const { data, error } = await supabase.from('students').insert([studentData]);
+
+    if (error) {
+      console.error('❌ Supabase insert error:', error.message);
+      alert('Error saving data: ' + error.message);
+    } else {
+      alert('✅ Form submitted and saved to Supabase!');
+      setFormData({
+        name: '',
+        fatherName: '',
+        mobile: '',
+        dob: '',
+        receipt: '',
+        admissionDate: '',
+        batch: '',
+        fee: '',
+        notes: '',
+        photo: null,
+      });
+    }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label>Name<span className="text-red-500">*</span></label>
-        <input type="text" value={name} onChange={(e) => setName(e.target.value)} required
-          className="border p-2 w-full" />
-      </div>
+    <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4">
+      <label htmlFor="name">Student's Name:</label>
+      <input
+        id="name"
+        name="name"
+        placeholder="Student's Name"
+        className="input"
+        onChange={handleChange}
+        value={formData.name}
+      />
 
-      <div>
-        <label>Father's Name<span className="text-red-500">*</span></label>
-        <input type="text" value={fatherName} onChange={(e) => setFatherName(e.target.value)} required
-          className="border p-2 w-full" />
-      </div>
+      <label htmlFor="fatherName">Father's Name:</label>
+      <input
+        id="fatherName"
+        name="fatherName"
+        placeholder="Father's Name"
+        className="input"
+        onChange={handleChange}
+        value={formData.fatherName}
+      />
 
-      <div>
-        <label>Mobile Number<span className="text-red-500">*</span></label>
-        <input type="tel" value={mobile} onChange={(e) => setMobile(e.target.value)} required
-          className="border p-2 w-full" />
-      </div>
+      <label htmlFor="mobile">Mobile Number:</label>
+      <input
+        id="mobile"
+        name="mobile"
+        placeholder="Mobile Number"
+        className="input"
+        onChange={handleChange}
+        value={formData.mobile}
+      />
 
-      <div>
-        <label>Date of Birth<span className="text-red-500">*</span></label>
-        <input type="date" value={dob} onChange={(e) => setDob(e.target.value)} required
-          className="border p-2 w-full" />
-      </div>
+      <label htmlFor="dob">Date of Birth:</label>
+      <input
+        id="dob"
+        name="dob"
+        type="date"
+        className="input"
+        onChange={handleChange}
+        value={formData.dob}
+      />
 
-      <div>
-        <label>Admission Date<span className="text-red-500">*</span></label>
-        <input type="date" value={admissionDate} onChange={(e) => setAdmissionDate(e.target.value)} required
-          className="border p-2 w-full" />
-      </div>
+      <label htmlFor="receipt">Receipt Number:</label>
+      <input
+        id="receipt"
+        name="receipt"
+        placeholder="Receipt Number"
+        className="input"
+        onChange={handleChange}
+        value={formData.receipt}
+      />
 
-      <div>
-        <label>Batch<span className="text-red-500">*</span></label>
-        <input type="text" value={batch} onChange={(e) => setBatch(e.target.value)} required
-          className="border p-2 w-full" />
-      </div>
+      <label htmlFor="admissionDate">Admission Date:</label>
+      <input
+        id="admissionDate"
+        name="admissionDate"
+        type="date"
+        className="input"
+        onChange={handleChange}
+        value={formData.admissionDate}
+      />
 
-      <div>
-        <label>Receipt Number (Optional)</label>
-        <input type="text" value={receipt} onChange={(e) => setReceipt(e.target.value)}
-          className="border p-2 w-full" />
-      </div>
+      <label htmlFor="batch">Batch:</label>
+      <select
+        id="batch"
+        name="batch"
+        className="input"
+        onChange={handleChange}
+        value={formData.batch}
+      >
+        <option value="">Select Batch</option>
+        <option value="Morning">Morning</option>
+        <option value="Evening">Evening</option>
+      </select>
 
-      <div>
-        <label>Fee (Optional)</label>
-        <input type="number" value={fee} onChange={(e) => setFee(e.target.value)}
-          className="border p-2 w-full" />
-      </div>
+      <label htmlFor="fee">Fee (optional):</label>
+      <input
+        id="fee"
+        name="fee"
+        placeholder="Fee (optional)"
+        className="input"
+        onChange={handleChange}
+        value={formData.fee}
+      />
 
-      <div>
-        <label>Notes (Optional)</label>
-        <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
-          className="border p-2 w-full"></textarea>
-      </div>
+      <label htmlFor="notes">Notes (optional):</label>
+      <textarea
+        id="notes"
+        name="notes"
+        placeholder="Notes (optional)"
+        className="input"
+        onChange={handleChange}
+        value={formData.notes}
+      ></textarea>
 
-      <div>
-        <label>Photo (Optional)</label>
-        <input type="file" onChange={(e) => setPhoto(e.target.files[0])}
-          className="border p-2 w-full" />
-      </div>
+      <label htmlFor="photo">Upload Photo:</label>
+      <input
+        id="photo"
+        type="file"
+        accept="image/*"
+        onChange={handleImageChange}
+        className="input"
+      />
 
-      <button type="submit"
-        disabled={!name || !fatherName || !mobile || !dob || !admissionDate || !batch}
-        className="bg-blue-500 text-white px-4 py-2 rounded disabled:opacity-50">
+      <button
+        type="button"
+        onClick={() => setCapture((prev) => !prev)}
+        className="bg-blue-500 text-white px-4 py-2 rounded"
+      >
+        {capture ? 'Cancel' : 'Capture with Webcam'}
+      </button>
+
+      {capture && (
+        <div className="flex flex-col items-center">
+          <Webcam ref={webcamRef} screenshotFormat="image/jpeg" className="rounded" />
+          <button
+            type="button"
+            onClick={capturePhoto}
+            className="mt-2 bg-green-500 text-white px-4 py-2 rounded"
+          >
+            Capture
+          </button>
+        </div>
+      )}
+
+      {formData.photo && (
+        <img
+          src={formData.photo}
+          alt="Preview"
+          className="w-32 h-32 object-cover rounded border"
+        />
+      )}
+
+      <button type="submit" className="bg-orange-500 text-white px-6 py-2 rounded">
         Submit
       </button>
     </form>
   );
-};
+}
 
 export default StudentForm;
+
